@@ -1,0 +1,12 @@
+# Terraform plugins and state (state can hold secrets)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+
+# Keys and secrets
+*.pem
+*.key
+drupal-ha-key*
+.env
