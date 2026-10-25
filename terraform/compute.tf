@@ -45,7 +45,7 @@ resource "aws_autoscaling_group" "drupal" {
   max_size                  = 4
   vpc_zone_identifier       = aws_subnet.public[*].id
   target_group_arns         = [aws_lb_target_group.drupal.arn]
-  health_check_type         = "ELB"
+  health_check_type         = "EC2"
   health_check_grace_period = 300
 
   launch_template {

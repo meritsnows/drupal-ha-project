@@ -1,0 +1,19 @@
+---
+- name: Clear Drupal caches
+  hosts: aws_ec2
+  become: true
+  vars:
+    db_password: "{{ lookup('env', 'TF_VAR_db_password') }}"
+
+  tasks:
+    - name: Empty the cache tables
+      run_once: true
+      environment:
+        MYSQL_PWD: "{{ db_password }}"
+      ansible.builtin.shell: |
+        mysql -h {{ db_host }} -u drupaladmin drupal -N -e "SELECT CONCAT('TRUNCATE TABLE ', table_name, ';') FROM information_schema.tables WHERE table_schema='drupal' AND table_name LIKE 'cache%'" | mysql -h {{ db_host }} -u drupaladmin drupal
+
+    - name: Restart Apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
