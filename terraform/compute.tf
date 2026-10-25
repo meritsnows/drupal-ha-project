@@ -22,6 +22,13 @@ resource "aws_launch_template" "drupal" {
   instance_type          = "t3.micro"
   key_name               = aws_key_pair.drupal.key_name
   vpc_security_group_ids = [aws_security_group.web.id]
+    user_data = base64encode(<<-EOT
+    #!/bin/bash
+    apt-get update -y
+    apt-get install -y apache2
+    systemctl enable --now apache2
+  EOT
+  )
 
   tag_specifications {
     resource_type = "instance"
