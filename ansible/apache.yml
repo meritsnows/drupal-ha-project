@@ -1,0 +1,38 @@
+---
+- name: Point Apache at Drupal
+  hosts: aws_ec2
+  become: true
+
+  tasks:
+    - name: Write the Drupal virtual host
+      ansible.builtin.copy:
+        dest: /etc/apache2/sites-available/drupal.conf
+        content: |
+          <VirtualHost *:80>
+              DocumentRoot /var/www/drupal/web
+              <Directory /var/www/drupal/web>
+                  AllowOverride All
+                  Require all granted
+              </Directory>
+              ErrorLog ${APACHE_LOG_DIR}/drupal-error.log
+              CustomLog ${APACHE_LOG_DIR}/drupal-access.log combined
+          </VirtualHost>
+      notify: Restart Apache
+
+    - name: Enable the Drupal site
+      ansible.builtin.command:
+        cmd: a2ensite drupal.conf
+        creates: /etc/apache2/sites-enabled/drupal.conf
+      notify: Restart Apache
+
+    - name: Disable the default site
+      ansible.builtin.command:
+        cmd: a2dissite 000-default.conf
+        removes: /etc/apache2/sites-enabled/000-default.conf
+      notify: Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted

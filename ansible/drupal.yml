@@ -1,0 +1,49 @@
+---
+- name: Configure Drupal web servers
+  hosts: aws_ec2
+  become: true
+
+  tasks:
+    - name: Install Apache, PHP and tools
+      ansible.builtin.apt:
+        name:
+          - apache2
+          - php
+          - libapache2-mod-php
+          - php-mysql
+          - php-gd
+          - php-xml
+          - php-mbstring
+          - php-curl
+          - php-zip
+          - php-intl
+          - mysql-client
+          - unzip
+          - composer
+          - git
+        state: present
+        update_cache: true
+
+    - name: Enable Apache rewrite module
+      community.general.apache2_module:
+        name: rewrite
+        state: present
+      notify: Restart Apache
+
+    - name: Create the Drupal project with Composer
+      ansible.builtin.command:
+        cmd: env COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_PROCESS_TIMEOUT=1800 composer create-project drupal/recommended-project:^11 /var/www/drupal --no-interaction
+        creates: /var/www/drupal/composer.json
+
+    - name: Give Apache ownership of the Drupal folder
+      ansible.builtin.file:
+        path: /var/www/drupal
+        owner: www-data
+        group: www-data
+        recurse: true
+
+  handlers:
+    - name: Restart Apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
