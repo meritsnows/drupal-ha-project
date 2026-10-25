@@ -1,0 +1,48 @@
+---
+- name: Connect Drupal to the database
+  hosts: aws_ec2
+  become: true
+  vars:
+    db_password: "{{ lookup('env', 'TF_VAR_db_password') }}"
+    hash_salt: "{{ (db_password ~ 'drupal-ha-salt') | hash('sha256') }}"
+
+  tasks:
+    - name: Create the config sync folder
+      ansible.builtin.file:
+        path: /var/www/drupal/config/sync
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: "0755"
+
+    - name: Create the public files folder
+      ansible.builtin.file:
+        path: /var/www/drupal/web/sites/default/files
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: "0775"
+
+    - name: Write settings.php
+      no_log: true
+      ansible.builtin.copy:
+        dest: /var/www/drupal/web/sites/default/settings.php
+        owner: www-data
+        group: www-data
+        mode: "0644"
+        content: |
+          <?php
+          $databases['default']['default'] = [
+            'driver' => 'mysql',
+            'database' => 'drupal',
+            'username' => 'drupaladmin',
+            'password' => '{{ db_password }}',
+            'host' => '{{ db_host }}',
+            'port' => '3306',
+            'prefix' => '',
+            'namespace' => 'Drupal\\mysql\\Driver\\Database\\mysql',
+            'autoload' => 'core/modules/mysql/src/Driver/Database/mysql/',
+          ];
+          $settings['hash_salt'] = '{{ hash_salt }}';
+          $settings['config_sync_directory'] = '../config/sync';
+          $settings['trusted_host_patterns'] = ['^.*$'];
