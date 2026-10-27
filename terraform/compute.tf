@@ -25,7 +25,7 @@ resource "aws_launch_template" "drupal" {
   iam_instance_profile {
     name = aws_iam_instance_profile.web.name
   }
-    user_data = base64encode(<<-EOT
+  user_data = base64encode(<<-EOT
     #!/bin/bash
     apt-get update -y
     apt-get install -y apache2
@@ -63,6 +63,18 @@ resource "aws_autoscaling_group" "drupal" {
   }
 }
 resource "aws_autoscaling_policy" "cpu" {
+  name                   = "${var.project_name}-cpu-target"
+  autoscaling_group_name = aws_autoscaling_group.drupal.name
+  policy_type            = "TargetTrackingScaling"
+
+  target_tracking_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ASGAverageCPUUtilization"
+    }
+    target_value = 60
+  }
+}
+resource "aws_autoscaling_policy" "cpu_target" {
   name                   = "${var.project_name}-cpu-target"
   autoscaling_group_name = aws_autoscaling_group.drupal.name
   policy_type            = "TargetTrackingScaling"
