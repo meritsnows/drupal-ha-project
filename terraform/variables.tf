@@ -12,7 +12,7 @@ variable "project_name" {
 variable "allowed_ssh_cidr" {
   description = "Your public IP, the only address allowed to SSH in"
   type        = string
-  default     = "105.116.0.0/16"
+  default     = "102.90.0.0/16"
 }
 variable "db_password" {
   description = "Master password for the database"
