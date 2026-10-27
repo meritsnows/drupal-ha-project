@@ -1,0 +1,54 @@
+---
+- name: Add alert rules to Prometheus
+  hosts: aws_ec2
+  become: true
+
+  tasks:
+    - name: Write the alert rules file
+      ansible.builtin.copy:
+        dest: /etc/prometheus/alert-rules.yml
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          groups:
+            - name: drupal-alerts
+              rules:
+                - alert: HighCPU
+                  expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+                  for: 5m
+                  labels:
+                    severity: critical
+                  annotations:
+                    summary: A Drupal server has had CPU above 80 percent for 5 minutes
+                - alert: ServerDown
+                  expr: up{job="drupal-servers"} == 0
+                  for: 1m
+                  labels:
+                    severity: critical
+                  annotations:
+                    summary: A Drupal server cannot be reached by Prometheus
+                - alert: ApacheDown
+                  expr: apache_up == 0
+                  for: 1m
+                  labels:
+                    severity: critical
+                  annotations:
+                    summary: Apache is not responding on a Drupal server
+      notify: Restart Prometheus
+
+    - name: Tell Prometheus to load the rules file
+      ansible.builtin.blockinfile:
+        path: /etc/prometheus/prometheus.yml
+        insertbefore: '^scrape_configs:'
+        marker: "# {mark} ANSIBLE ALERT RULES"
+        block: |
+          rule_files:
+            - /etc/prometheus/alert-rules.yml
+      notify: Restart Prometheus
+
+  handlers:
+    - name: Restart Prometheus
+      ansible.builtin.service:
+        name: prometheus
+        state: restarted

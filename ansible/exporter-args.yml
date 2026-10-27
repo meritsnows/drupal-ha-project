@@ -1,0 +1,18 @@
+---
+- name: Point the Apache exporter at the private status page
+  hosts: aws_ec2
+  become: true
+
+  tasks:
+    - name: Set the exporter's scrape address
+      ansible.builtin.lineinfile:
+        path: /etc/default/prometheus-apache-exporter
+        regexp: '^ARGS='
+        line: 'ARGS="--scrape_uri=http://127.0.0.1:8080/server-status?auto"'
+      notify: Restart exporter
+
+  handlers:
+    - name: Restart exporter
+      ansible.builtin.service:
+        name: prometheus-apache-exporter
+        state: restarted

@@ -22,6 +22,9 @@ resource "aws_launch_template" "drupal" {
   instance_type          = "t3.micro"
   key_name               = aws_key_pair.drupal.key_name
   vpc_security_group_ids = [aws_security_group.web.id]
+  iam_instance_profile {
+    name = aws_iam_instance_profile.web.name
+  }
     user_data = base64encode(<<-EOT
     #!/bin/bash
     apt-get update -y

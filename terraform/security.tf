@@ -23,38 +23,6 @@ resource "aws_security_group" "alb" {
   }
 }
 
-resource "aws_security_group" "web" {
-  name        = "${var.project_name}-web-sg"
-  description = "Allow traffic to the Drupal servers"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description     = "HTTP from the load balancer only"
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  ingress {
-    description = "SSH from my IP only"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.allowed_ssh_cidr]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "${var.project_name}-web-sg"
-  }
-}
 resource "aws_security_group" "db" {
   name        = "${var.project_name}-db-sg"
   description = "Allow MySQL only from the Drupal servers"
@@ -70,5 +38,53 @@ resource "aws_security_group" "db" {
 
   tags = {
     Name = "${var.project_name}-db-sg"
+  }
+}
+resource "aws_security_group" "web" {
+  name        = "${var.project_name}-web-sg"
+  description = "Allow traffic to the Drupal servers"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "HTTP from the load balancer only"
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  ingress {
+    description = "SSH from my network"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_ssh_cidr]
+  }
+
+  ingress {
+    description     = "Server metrics from the monitoring server"
+    from_port       = 9100
+    to_port         = 9100
+    protocol        = "tcp"
+    security_groups = [aws_security_group.monitoring.id]
+  }
+
+  ingress {
+    description     = "Apache metrics from the monitoring server"
+    from_port       = 9117
+    to_port         = 9117
+    protocol        = "tcp"
+    security_groups = [aws_security_group.monitoring.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-web-sg"
   }
 }

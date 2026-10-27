@@ -1,0 +1,22 @@
+---
+- name: Install metrics exporters on the Drupal servers
+  hosts: aws_ec2
+  become: true
+
+  tasks:
+    - name: Install node exporter and Apache exporter
+      ansible.builtin.apt:
+        name:
+          - prometheus-node-exporter
+          - prometheus-apache-exporter
+        state: present
+        update_cache: true
+
+    - name: Make sure both exporters are running
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - prometheus-node-exporter
+        - prometheus-apache-exporter

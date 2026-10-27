@@ -1,0 +1,48 @@
+---
+- name: Install Prometheus on the monitoring server
+  hosts: aws_ec2
+  become: true
+  vars:
+    drupal_ips:
+      - 10.0.1.234
+      - 10.0.0.48
+
+  tasks:
+    - name: Install Prometheus
+      ansible.builtin.apt:
+        name: prometheus
+        state: present
+        update_cache: true
+
+    - name: Write the Prometheus settings
+      ansible.builtin.copy:
+        dest: /etc/prometheus/prometheus.yml
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          global:
+            scrape_interval: 15s
+          scrape_configs:
+            - job_name: prometheus
+              static_configs:
+                - targets: ["localhost:9090"]
+            - job_name: drupal-servers
+              static_configs:
+                - targets: {{ drupal_ips | map('regex_replace', '$', ':9100') | list | to_json }}
+            - job_name: drupal-apache
+              static_configs:
+                - targets: {{ drupal_ips | map('regex_replace', '$', ':9117') | list | to_json }}
+      notify: Restart Prometheus
+
+    - name: Make sure Prometheus is running
+      ansible.builtin.service:
+        name: prometheus
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Restart Prometheus
+      ansible.builtin.service:
+        name: prometheus
+        state: restarted

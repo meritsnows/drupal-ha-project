@@ -1,0 +1,44 @@
+---
+- name: Install Grafana on the monitoring server
+  hosts: aws_ec2
+  become: true
+
+  tasks:
+    - name: Install prerequisite packages
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - wget
+          - gnupg
+        state: present
+        update_cache: true
+
+    - name: Create the keyrings folder
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Download the Grafana signing key
+      ansible.builtin.get_url:
+        url: https://apt.grafana.com/gpg-full.key
+        dest: /etc/apt/keyrings/grafana.asc
+        mode: "0644"
+
+    - name: Add the Grafana repository
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/grafana.list
+        content: |
+          deb [signed-by=/etc/apt/keyrings/grafana.asc] https://apt.grafana.com stable main
+
+    - name: Install Grafana
+      ansible.builtin.apt:
+        name: grafana
+        state: present
+        update_cache: true
+
+    - name: Make sure Grafana is running
+      ansible.builtin.service:
+        name: grafana-server
+        state: started
+        enabled: true

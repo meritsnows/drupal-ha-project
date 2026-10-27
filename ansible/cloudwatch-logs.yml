@@ -1,0 +1,52 @@
+---
+- name: Ship Apache logs to CloudWatch Logs
+  hosts: aws_ec2
+  become: true
+
+  tasks:
+    - name: Download the CloudWatch agent package
+      ansible.builtin.get_url:
+        url: https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+        dest: /tmp/amazon-cloudwatch-agent.deb
+        mode: "0644"
+
+    - name: Install the CloudWatch agent
+      ansible.builtin.apt:
+        deb: /tmp/amazon-cloudwatch-agent.deb
+
+    - name: Write the agent configuration
+      ansible.builtin.copy:
+        dest: /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          {
+            "agent": { "run_as_user": "root" },
+            "logs": {
+              "logs_collected": {
+                "files": {
+                  "collect_list": [
+                    {
+                      "file_path": "/var/log/apache2/drupal-access.log",
+                      "log_group_name": "/drupal-ha/apache-access",
+                      "log_stream_name": "{instance_id}",
+                      "retention_in_days": 7
+                    },
+                    {
+                      "file_path": "/var/log/apache2/drupal-error.log",
+                      "log_group_name": "/drupal-ha/apache-error",
+                      "log_stream_name": "{instance_id}",
+                      "retention_in_days": 7
+                    }
+                  ]
+                }
+              }
+            }
+          }
+      notify: Start the agent
+
+  handlers:
+    - name: Start the agent
+      ansible.builtin.command:
+        cmd: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json

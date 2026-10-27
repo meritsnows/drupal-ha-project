@@ -1,0 +1,31 @@
+---
+- name: Expose Apache status on a private local port
+  hosts: aws_ec2
+  become: true
+
+  tasks:
+    - name: Write the status virtual host
+      ansible.builtin.copy:
+        dest: /etc/apache2/sites-available/status.conf
+        content: |
+          Listen 127.0.0.1:8080
+          <VirtualHost 127.0.0.1:8080>
+              DocumentRoot /var/www/html
+              <Location "/server-status">
+                  SetHandler server-status
+                  Require local
+              </Location>
+          </VirtualHost>
+      notify: Restart Apache
+
+    - name: Enable the status site
+      ansible.builtin.command:
+        cmd: a2ensite status.conf
+        creates: /etc/apache2/sites-enabled/status.conf
+      notify: Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
