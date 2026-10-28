@@ -42,3 +42,7 @@ resource "aws_iam_instance_profile" "web" {
   name = "${var.project_name}-web-profile"
   role = aws_iam_role.web.name
 }
+resource "aws_iam_role_policy_attachment" "web_ssm" {
+  role       = aws_iam_role.web.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
