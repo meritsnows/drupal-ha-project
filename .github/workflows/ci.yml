@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   validate:
@@ -63,3 +64,45 @@ jobs:
             exit 1
           fi
           echo "PASS: no AWS access keys found"
+
+  staging:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    env:
+      APP_URL: http://drupal-ha-alb-1031037894.eu-north-1.elb.amazonaws.com
+    steps:
+      - name: Smoke test - site answers through the load balancer
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$APP_URL" || true)
+            echo "Attempt $i: HTTP $code"
+            if [ "$code" -ge 200 ] && [ "$code" -lt 400 ]; then
+              echo "PASS: site is up"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "FAIL: site did not answer"
+          exit 1
+
+      - name: Smoke test - response time under 10 seconds
+        run: |
+          t=$(curl -s -o /dev/null -w '%{time_total}' --max-time 20 "$APP_URL")
+          echo "Response time: $t seconds"
+          awk -v t="$t" 'BEGIN { exit !(t < 10) }' && echo "PASS: fast enough"
+
+  production:
+    runs-on: ubuntu-latest
+    needs: staging
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    env:
+      APP_URL: http://drupal-ha-alb-1031037894.eu-north-1.elb.amazonaws.com
+    steps:
+      - name: Production gate - site answers through the load balancer
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$APP_URL" || true)
+          echo "HTTP $code"
+          [ "$code" -ge 200 ] && [ "$code" -lt 400 ] && echo "PASS: production is up"
