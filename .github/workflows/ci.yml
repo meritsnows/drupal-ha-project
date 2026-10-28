@@ -40,3 +40,26 @@ jobs:
             echo "Checking $f"
             ansible-playbook -i localhost, --syntax-check "$f"
           done
+
+  test:
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Test that high availability settings are present
+        run: |
+          grep -q 'min_size *= *2' terraform/compute.tf && echo "PASS: at least 2 servers"
+          grep -q 'resource "aws_autoscaling_policy" "cpu_target"' terraform/compute.tf && echo "PASS: auto scaling policy"
+          grep -q 'aws_availability_zones' terraform/network.tf && echo "PASS: subnets across availability zones"
+          grep -q 'resource "aws_db_instance"' terraform/network.tf && echo "PASS: managed database"
+          grep -q 'resource "aws_lb"' terraform/loadbalancer.tf && echo "PASS: load balancer"
+
+      - name: Test that no AWS keys are in the code
+        run: |
+          if grep -rEq 'AKIA[0-9A-Z]{16}' terraform ansible; then
+            echo "FAIL: a possible AWS access key was found"
+            exit 1
+          fi
+          echo "PASS: no AWS access keys found"
