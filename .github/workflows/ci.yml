@@ -19,6 +19,11 @@ jobs:
         working-directory: terraform
         run: terraform fmt -check -recursive
 
+      - name: Create a throwaway SSH key for validation
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keygen -t ed25519 -f ~/.ssh/drupal-ha-key -N "" -q
+
       - name: Terraform validate
         working-directory: terraform
         run: |
@@ -35,7 +40,3 @@ jobs:
             echo "Checking $f"
             ansible-playbook -i localhost, --syntax-check "$f"
           done
-                - name: Create a throwaway SSH key for validation
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keygen -t ed25519 -f ~/.ssh/drupal-ha-key -N "" -q
