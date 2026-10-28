@@ -35,3 +35,7 @@ jobs:
             echo "Checking $f"
             ansible-playbook -i localhost, --syntax-check "$f"
           done
+                - name: Create a throwaway SSH key for validation
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keygen -t ed25519 -f ~/.ssh/drupal-ha-key -N "" -q
